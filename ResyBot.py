@@ -82,7 +82,6 @@ def find_table(res_date,party_size,table_time,auth_token,venue_id):
 			closest_times = set(closest_times)
 			best_tables = [k for k in open_slots if k['date']['start'] in closest_times ]
 			return best_tables
-			
 
 def make_reservation(auth_token, payment_method_string, config_id,res_date,party_size):
 	#convert datetime to string
