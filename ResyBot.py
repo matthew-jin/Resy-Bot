@@ -59,17 +59,30 @@ def find_table(res_date,party_size,table_time,auth_token,venue_id):
 		if len(open_slots) > 0:
 			available_times = [(k['date']['start'],datetime.datetime.strptime(k['date']['start'],"%Y-%m-%d %H:%M:00").hour, datetime.datetime.strptime(k['date']['start'],"%Y-%m-%d %H:%M:00").minute) for k in open_slots]
 
+			#print(open_slots)
 			decimal_available_times = []
 			for i in range (0, len(available_times)):
 				decimal_available_times.append(available_times[i][1] + available_times[i][2]/60)
 
 			absolute_difference_function = lambda list_value : abs(list_value - table_time)
-			decimal_closest_time = min(decimal_available_times, key= absolute_difference_function)
-			closest_time = available_times[decimal_available_times.index(decimal_closest_time)][0]
 
-			#closest_time = min(available_times, key=lambda x:abs(x[1]-table_time))[0]
-			best_table = [k for k in open_slots if k['date']['start'] == closest_time][0]
-			return best_table
+			# ORIGINAL
+			#decimal_closest_time = min(decimal_available_times, key= absolute_difference_function)
+			#closest_time = available_times[decimal_available_times.index(decimal_closest_time)][0]
+			#best_table = [k for k in open_slots if k['date']['start'] == closest_time][0]
+			#return best_table
+
+
+			#sort by best time insted
+			decimal_closest_times = sorted(decimal_available_times, key= absolute_difference_function)[:25]
+			closest_times = []
+			for dt in decimal_closest_times:
+				closest_times.append(available_times[decimal_available_times.index(dt)][0])
+			#print(closest_times)
+			closest_times = set(closest_times)
+			best_tables = [k for k in open_slots if k['date']['start'] in closest_times ]
+			return best_tables
+			
 
 def make_reservation(auth_token, payment_method_string, config_id,res_date,party_size):
 	#convert datetime to string
@@ -95,20 +108,33 @@ def make_reservation(auth_token, payment_method_string, config_id,res_date,party
 
 
 def try_table(day,party_size,table_time,auth_token,restaurantID, restaurantName, payment_method_string,earliest_time, latest_time):
-	best_table = find_table(day,party_size,table_time,auth_token,restaurantID)
-	if best_table is not None:
+	#best_table = find_table(day,party_size,table_time,auth_token,restaurantID)
+	best_tables = find_table(day,party_size,table_time,auth_token,restaurantID)
+	if best_tables:
+		for best_table in best_tables:
 			hour = datetime.datetime.strptime(best_table['date']['start'],"%Y-%m-%d %H:%M:00").hour + datetime.datetime.strptime(best_table['date']['start'],"%Y-%m-%d %H:%M:00").minute/60
-			if (hour >= earliest_time) and (hour <= latest_time):
-				config_id = best_table['config']['token']
-				make_reservation(auth_token, payment_method_string,config_id,day,party_size)
-				digital_hour= str(int(math.floor(hour))) + ':' + str(int((hour%(math.floor(hour)))*60))
-				if(len(digital_hour.split(":")[1]) == 1):
-					digital_hour += "0" 
-				print ('Successfully reserved a table for ' + str(party_size) + ' at ' + restaurantName + ' at ' + digital_hour)
-			else:
-				print("No tables will ever be available within that time range")
-				time.sleep(5)
-			return 1
+			if hour < earliest_time:
+				continue
+			print(best_table['date']['start'])
+
+			# if (hour >= earliest_time) and (hour <= latest_time):
+			# 	config_id = best_table['config']['token']
+			# 	make_reservation(auth_token, payment_method_string,config_id,day,party_size)
+			# 	digital_hour= str(int(math.floor(hour))) + ':' + str(int((hour%(math.floor(hour)))*60))
+			# 	if(len(digital_hour.split(":")[1]) == 1):
+			# 		digital_hour += "0" 
+			# 	print ('Successfully reserved a table for ' + str(party_size) + ' at ' + restaurantName + ' at ' + digital_hour)
+			# else:
+			# 	print("No tables will ever be available within that time range")
+			# 	time.sleep(5)
+			# return 1
+
+			config_id = best_table['config']['token']
+			make_reservation(auth_token, payment_method_string,config_id,day,party_size)
+			digital_hour= str(int(math.floor(hour))) + ':' + str(int((hour%(math.floor(hour)))*60))
+			if(len(digital_hour.split(":")[1]) == 1):
+				digital_hour += "0" 
+			print ('Successfully reserved a table for ' + str(party_size) + ' at ' + restaurantName + ' at ' + digital_hour)
 
 	else:
 		time.sleep(1)
